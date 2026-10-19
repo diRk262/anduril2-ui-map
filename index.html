@@ -1,0 +1,567 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- Anduril 2 Controls - interactive UI reference. (C) 2026 diRk262. GPL-3.0-or-later. Based on the official Anduril 2 manual (ToyKeeper/anduril). -->
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>Anduril 2 Controls</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+  /* Layout: an interactive state map. Pick a state (node) → the panel lists every click it offers.
+     Toggle Simple/Advanced. Essentials (reset, UI switch) pinned below. */
+  :root{
+    --bg:#f4f2ee; --surface:#fffdf9; --surface-2:#efece5; --fg:#211d17; --muted:#6f685c;
+    --line:#ded8cc; --accent:#c9771a; --accent-soft:#f3e2cc; --cool:#2f7d8c; --cool-soft:#d9ebee;
+    --warn:#b23b2e; --warn-soft:#f4ddd8;
+    --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+    --disp:"Chakra Petch",system-ui,sans-serif;
+    --body:"IBM Plex Sans",system-ui,-apple-system,sans-serif;
+  }
+  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+    --bg:#15130f; --surface:#211d17; --surface-2:#1a1712; --fg:#f0ebe1; --muted:#a79e8e;
+    --line:#352f26; --accent:#e89440; --accent-soft:#3a2a16; --cool:#5bb6c7; --cool-soft:#13302f;
+    --warn:#e2674f; --warn-soft:#3a1d18; color-scheme:dark;
+  }}
+  :root[data-theme="dark"]{
+    --bg:#15130f; --surface:#211d17; --surface-2:#1a1712; --fg:#f0ebe1; --muted:#a79e8e;
+    --line:#352f26; --accent:#e89440; --accent-soft:#3a2a16; --cool:#5bb6c7; --cool-soft:#13302f;
+    --warn:#e2674f; --warn-soft:#3a1d18; color-scheme:dark;
+  }
+  *{box-sizing:border-box}
+  body{background:var(--bg);color:var(--fg);font-family:var(--body);line-height:1.5;margin:0}
+  .wrap{max-width:1040px;margin:0 auto;
+    padding-left:max(16px,env(safe-area-inset-left,0px));
+    padding-right:max(16px,env(safe-area-inset-right,0px));
+    padding-block:clamp(22px,5vw,46px)}
+
+  header h1{font-family:var(--disp);font-weight:700;letter-spacing:.01em;
+    font-size:clamp(1.9rem,6vw,3rem);margin:0;line-height:1.02;text-wrap:balance}
+  header h1 .sub{color:var(--accent)}
+  .lede{color:var(--muted);max-width:62ch;margin:.6rem 0 0;font-size:1.02rem}
+
+  .code{font-family:var(--mono);font-weight:600;font-size:.8rem;white-space:nowrap;
+    background:var(--surface-2);border:1px solid var(--line);border-radius:7px;
+    padding:.16rem .45rem;flex:none;min-width:2.7rem;text-align:center;color:var(--fg)}
+
+  .legend{display:flex;flex-wrap:wrap;gap:.9rem 1.4rem;margin:1.4rem 0 .2rem;
+    padding:.85rem 1.05rem;background:var(--surface-2);border:1px solid var(--line);border-radius:14px}
+  .legend div{display:flex;align-items:center;gap:.55rem;font-size:.88rem}
+
+  .toggle{display:inline-flex;gap:.25rem;margin:1.9rem 0 1rem;padding:.3rem;
+    background:var(--surface-2);border:1px solid var(--line);border-radius:999px}
+  .toggle button{font-family:var(--disp);font-weight:600;font-size:.95rem;letter-spacing:.02em;
+    border:0;background:transparent;color:var(--muted);padding:.5rem 1.15rem;border-radius:999px;cursor:pointer;transition:.15s}
+  .toggle button[aria-selected="true"]{background:var(--accent);color:#fff}
+  .toggle button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+  .board{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,360px);gap:1.1rem;align-items:start}
+  @media (max-width:1040px){.board{grid-template-columns:1fr}}
+
+  .mapcard{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:.6rem}
+  .maphint{color:var(--muted);font-size:.82rem;padding:.3rem .5rem .5rem}
+  .stage{position:relative;width:100%;max-width:760px;margin:0 auto}
+  .wires{position:absolute;inset:0;width:100%;height:100%}
+
+  .picker{display:none;flex-wrap:wrap;gap:.5rem;padding:.2rem .2rem .4rem}
+  .pbtn{font:inherit;cursor:pointer;display:flex;flex-direction:column;align-items:flex-start;gap:.05rem;
+    background:var(--surface);border:1.5px solid var(--line);border-radius:10px;padding:.45rem .7rem;color:inherit}
+  .pbtn b{font-family:var(--disp);font-weight:600;font-size:.82rem;line-height:1}
+  .pbtn small{color:var(--muted);font-size:.64rem}
+  .pbtn.hub{background:var(--accent-soft);border-color:var(--accent)}
+  .pbtn.tone-hot{border-color:var(--warn)} .pbtn.tone-hot small{color:var(--warn)}
+  .pbtn.tone-cool{border-color:var(--cool)} .pbtn.tone-cool small{color:var(--cool)}
+  .pbtn.active{outline:3px solid var(--accent);outline-offset:2px}
+  .pbtn:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+  @media (max-width:700px){ .picker{display:flex} .detail{display:none} .maphint{display:none} }
+  .wires line{stroke:var(--line);stroke-width:2}
+  .wires line.lit{stroke:var(--accent)}
+  .elabel{position:absolute;transform:translate(-50%,-50%);font-family:var(--mono);font-weight:600;
+    font-size:.72rem;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:.05rem .35rem;z-index:2;color:var(--muted)}
+
+  .node{position:absolute;transform:translate(-50%,-50%);width:120px;min-height:50px;z-index:3;cursor:pointer;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.05rem;text-align:center;
+    background:var(--surface);border:1.5px solid var(--line);border-radius:12px;padding:.4rem .3rem;transition:.12s;font:inherit;color:inherit}
+  .node b{font-family:var(--disp);font-weight:600;font-size:.86rem;line-height:1}
+  .node small{color:var(--muted);font-size:.66rem}
+  .node.hub{background:var(--accent-soft);border-color:var(--accent)}
+  .node.tone-hot{border-color:var(--warn)} .node.tone-hot small{color:var(--warn)}
+  .node.tone-cool{border-color:var(--cool)} .node.tone-cool small{color:var(--cool)}
+  .node:hover{transform:translate(-50%,-50%) scale(1.04)}
+  .node.active{outline:3px solid var(--accent);outline-offset:2px;box-shadow:0 6px 18px rgba(0,0,0,.12)}
+  .node:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+  .node.fnode{flex-direction:row;align-items:center;gap:.45rem;width:auto;min-width:150px;max-width:300px;min-height:0;text-align:left;padding:.4rem .55rem}
+  .node.fnode .fl{font-family:var(--body);font-weight:600;font-size:.76rem;line-height:1.1;min-width:0}
+  .node.fnode.leaf{cursor:default}
+  .node.fnode.leaf:hover{transform:translate(-50%,-50%)}
+  .node.fnode.drill .fl::after{content:' ›';color:var(--cool);font-weight:700}
+
+  .detail{background:var(--surface);border:1px solid var(--line);border-radius:16px;overflow:hidden;position:sticky;top:12px}
+  .detail .dh{padding:.9rem 1.05rem;background:var(--accent-soft);border-bottom:1px solid var(--line)}
+  .detail .dh b{font-family:var(--disp);font-weight:700;font-size:1.15rem;display:block}
+  .detail .dh small{color:var(--muted);font-size:.84rem}
+  .detail ul{list-style:none;margin:0;padding:.3rem .5rem .6rem;max-height:430px;overflow:auto}
+  .detail li{display:flex;gap:.7rem;align-items:baseline;padding:.45rem .5rem}
+  .detail li + li{border-top:1px solid var(--line)}
+  .detail .l b{font-weight:600;font-size:.88rem}
+  .detail .l small{display:block;color:var(--muted);font-size:.76rem;margin-top:.05rem}
+  .detail li.key .code{background:var(--accent);border-color:var(--accent);color:#fff}
+  .detail li.hot .code{background:var(--warn-soft);border-color:var(--warn);color:var(--warn)}
+  .detail li.cool .code{background:var(--cool-soft);border-color:var(--cool);color:var(--cool)}
+  .dsub{font-family:var(--mono);font-size:.66rem;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);
+    padding:.6rem .95rem .3rem;border-top:1px solid var(--line);background:var(--surface-2)}
+  .detail ul.modes{max-height:none}
+  .detail ul.modes .code{background:var(--cool-soft);border-color:var(--cool);color:var(--cool);font-weight:600}
+  .crumbs{display:flex;flex-wrap:wrap;gap:.25rem .4rem;align-items:center;padding:.55rem .95rem .1rem;font-size:.78rem}
+  .crumbs button{font:inherit;background:none;border:0;color:var(--accent);cursor:pointer;padding:0}
+  .crumbs span{color:var(--muted)}
+  .crumbs em{color:var(--fg);font-style:normal;font-weight:600}
+  .vmap{display:flex;flex-direction:column;gap:.45rem;padding:.2rem .1rem .3rem}
+  .vmap .crumbs{padding:.2rem .2rem 0}
+  .vback{align-self:flex-start;font:inherit;background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:.3rem .6rem;color:var(--accent);cursor:pointer;font-weight:600;font-size:.8rem}
+  .vhead{padding:.1rem .25rem .2rem}
+  .vhead b{font-family:var(--disp);font-weight:700;font-size:1.05rem;display:block;line-height:1.05}
+  .vhead small{color:var(--muted);font-size:.82rem}
+  .vtree{list-style:none;margin:.1rem 0 0;padding:0 0 0 16px;border-left:2px solid var(--line);display:flex;flex-direction:column;gap:.4rem}
+  .vchip{position:relative;display:flex;align-items:center;gap:.5rem;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:.45rem .55rem;font:inherit;color:inherit;text-align:left;width:100%}
+  .vchip::before{content:"";position:absolute;left:-16px;top:50%;width:14px;height:2px;background:var(--line)}
+  .vchip .fl{font-weight:600;font-size:.82rem;min-width:0;line-height:1.1}
+  .vchip .fl small{display:block;color:var(--muted);font-size:.72rem;font-weight:400;margin-top:.05rem}
+  .vchip.drill{cursor:pointer;border-color:var(--cool)}
+  .vchip.drill::after{content:"\203A";margin-left:auto;color:var(--cool);font-weight:700;padding-left:.3rem}
+  .vchip.tone-hot{border-color:var(--warn)}
+  .vchip.tone-hot .code{background:var(--warn-soft);border-color:var(--warn);color:var(--warn)}
+  .vchip.tone-cool{border-color:var(--cool)}
+  .vchip.key .code{background:var(--accent);border-color:var(--accent);color:#fff}
+  .detail li.drill{cursor:pointer}
+  .detail li.drill:hover{background:var(--surface-2)}
+  .detail li.drill .l b::after{content:' ›';color:var(--cool);font-weight:700}
+
+  .essentials{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1.1rem;margin-top:1.4rem}
+  .panel{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:1.05rem 1.15rem;min-width:0}
+  .panel h4{font-family:var(--disp);font-weight:600;margin:0 0 .6rem;font-size:1rem;display:flex;align-items:center;gap:.5rem}
+  .panel h4 .tag{font-family:var(--mono);font-size:.64rem;letter-spacing:.04em;text-transform:uppercase;
+    background:var(--cool-soft);color:var(--cool);border-radius:6px;padding:.14rem .4rem}
+  .panel ul{list-style:none;margin:0;padding:0}
+  .panel ul li{display:flex;gap:.7rem;align-items:baseline;padding:.38rem 0}
+  .panel ul li + li{border-top:1px solid var(--line)}
+  .panel p{margin:.3rem 0 0;color:var(--muted);font-size:.88rem}
+  .steps{counter-reset:s;list-style:none;margin:.2rem 0 0;padding:0}
+  .steps li{position:relative;padding:.42rem 0 .42rem 2rem}
+  .steps li + li{border-top:1px solid var(--line)}
+  .steps li::before{counter-increment:s;content:counter(s);position:absolute;left:0;top:.4rem;
+    font-family:var(--mono);font-weight:600;font-size:.76rem;width:1.35rem;height:1.35rem;display:grid;place-items:center;
+    background:var(--accent);color:#fff;border-radius:50%}
+  .reset{border-color:var(--warn)}.reset h4 .tag{background:var(--warn-soft);color:var(--warn)}
+
+  .note{background:var(--cool-soft);border:1px solid var(--line);border-radius:12px;padding:.7rem .9rem;margin-top:1.4rem;font-size:.86rem}
+  footer{margin-top:1.4rem;padding-top:1.2rem;border-top:1px solid var(--line);color:var(--muted);font-size:.86rem}
+  footer a{color:var(--accent)}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+
+<div class="wrap">
+  <header>
+    <h1>Anduril&nbsp;2 <span class="sub">Controls</span></h1>
+    <p class="lede">An interactive map of the Anduril&nbsp;2 flashlight UI. Tap a state to see every click it offers. Toggle between the Simple and Advanced interfaces.</p>
+  </header>
+
+  <div class="legend" aria-label="Notation">
+    <div><span class="code">1C</span><span><b>C</b> = click (press &amp; release)</span></div>
+    <div><span class="code">1H</span><span><b>H</b> = hold on the last press</span></div>
+    <div><span class="code">3C</span><span>number = how many clicks</span></div>
+  </div>
+
+  <div class="toggle" role="tablist" aria-label="UI mode">
+    <button role="tab" id="tab-simple" aria-selected="true">Simple UI</button>
+    <button role="tab" id="tab-adv" aria-selected="false">Advanced UI</button>
+  </div>
+
+  <div class="board">
+    <div class="mapcard">
+      <div class="maphint" id="maphint">Tap a state to see its clicks. On the map, labels on the lines show the click that gets you there.</div>
+      <div class="stage" id="stage"></div>
+      <div class="picker" id="picker" aria-label="Choose a state"></div>
+    </div>
+    <div class="detail" id="detail"></div>
+  </div>
+
+  <div class="essentials">
+    <div class="panel">
+      <h4><span class="tag">Switch</span>Simple ↔ Advanced</h4>
+      <p>Turn the light <b>off</b> first, then:</p>
+      <ul>
+        <li><span class="code">10H</span><span class="l">Simple → <b>Advanced</b></span></li>
+        <li><span class="code">10C</span><span class="l">Advanced → <b>Simple</b></span></li>
+      </ul>
+      <p>Which am I in? Battery check (3C) shows voltage <b>once</b> in Simple, <b>repeatedly</b> in Advanced.</p>
+    </div>
+    <div class="panel reset">
+      <h4><span class="tag">Reset</span>Factory reset</h4>
+      <ol class="steps">
+        <li>Loosen the tailcap/head (cut power)</li>
+        <li><b>Press and hold</b> the button</li>
+        <li>Tighten it back while still holding</li>
+        <li>Keep holding until it <b>bursts to full power</b>, then release</li>
+      </ol>
+      <p>Or, on some lights: from Off, <span class="code">13H</span>. Simple UI is enabled afterward.</p>
+    </div>
+    <div class="panel">
+      <h4><span class="tag">Menus</span>How config menus work</h4>
+      <p>Enter a menu, it <b>blinks</b> for each item. <b>Hold on an item = skip</b> it, <b>release = enter</b> it. Inside an item: <b>click = +1</b>, <b>hold = +10</b>. Stop pressing to exit.</p>
+    </div>
+  </div>
+
+  <div class="note">
+    <b>Note:</b> Some clicks ("some lights" / marked in the panel) depend on the model and compiled options — RGB aux LEDs, tint channels, the strobe set, factory-reset-by-button. The states and core clicks are the same across Anduril&nbsp;2.
+  </div>
+
+  <footer>
+    Based on the official Anduril&nbsp;2 manual ·
+    <a href="https://github.com/ToyKeeper/anduril/blob/trunk/docs/anduril-manual.md" target="_blank" rel="noopener">ToyKeeper/anduril — anduril-manual.md</a> ·
+    <a href="https://anduril.click/" target="_blank" rel="noopener">anduril.click</a>
+  </footer>
+</div>
+
+<script>
+  var UI={
+    adv:{
+      nodes:[
+        {id:'off',t:'OFF',s:'standby',x:250,y:235,role:'hub'},
+        {id:'on',t:'ON · RAMP',s:'ramping',x:440,y:235,role:'hub'},
+        {id:'turbo',t:'TURBO',s:'max',x:590,y:110,tone:'hot'},
+        {id:'lockout',t:'LOCKOUT',s:'button lock',x:625,y:300,tone:'cool'},
+        {id:'aux',t:'AUX LEDS',s:'button LEDs',x:625,y:405,tone:'cool'},
+        {id:'batt',t:'BATT CHECK',s:'voltage group',x:430,y:400,tone:'cool'},
+        {id:'strobes',t:'STROBES',s:'mood / party',x:150,y:385,tone:'cool'},
+        {id:'moment',t:'MOMENTARY',s:'hold = on',x:355,y:72},
+        {id:'tactical',t:'TACTICAL',s:'3 slots',x:105,y:235}
+      ],
+      edges:[['off','on','1C'],['on','turbo','2C'],
+        ['off','lockout','4C'],['off','aux','7C'],['off','batt','3C'],
+        ['off','strobes','3H'],['off','moment','5C'],['off','tactical','6C']]
+    },
+    simple:{
+      nodes:[
+        {id:'off',t:'OFF',s:'standby',x:265,y:165,role:'hub'},
+        {id:'on',t:'ON · RAMP',s:'ramping',x:470,y:165,role:'hub'},
+        {id:'turbo',t:'CEILING',s:'max safe',x:615,y:70,tone:'hot'},
+        {id:'lockout',t:'LOCKOUT',s:'button lock',x:620,y:290,tone:'cool'},
+        {id:'batt',t:'BATT CHECK',s:'voltage',x:360,y:300,tone:'cool'}
+      ],
+      edges:[['off','on','1C'],['on','turbo','2C'],['off','lockout','4C'],['off','batt','3C']]
+    }
+  };
+
+  var D={
+    adv:{
+      off:{c:'Off',t:'OFF — standby',e:'The light is off — home base. Rows with a › drill into that mode or menu.',r:[
+        ['1C','On — last-used brightness','','key'],['1H','On at floor, keep holding to ramp up','','key'],
+        ['2C','On at ceiling'],['2H','Momentary turbo — on while held','','hot'],
+        ['3C','Battery check group','voltage · temp · beacon · SOS','cool','batt'],
+        ['3H','Strobe / mood modes','candle · bike · party …','cool','strobes'],
+        ['4C','Lockout (button lock)','','cool','lockout'],['5C','Momentary mode','','','moment'],['6C','Tactical mode','','','tactical'],
+        ['7C','Aux LED: next pattern','','cool','aux'],['7H','Aux LED: next color','','cool','aux'],['8H','Aux LED: brightness','some models'],
+        ['9H','Misc config','tint style, jump level','cool','misccfg'],
+        ['10C','Switch to Simple UI','','cool','ui-simple'],['10H','Simple-UI config menu','','cool','simplecfg'],
+        ['13H','Factory reset','some lights','hot'],['15C+','Version check']
+      ]},
+      on:{c:'On',t:'ON · Ramp',e:'The light is on and ramping.',r:[
+        ['1C','Off','','key'],['1H','Ramp up','reverses if just released or at ceiling','key'],
+        ['2H','Ramp down','','key'],['2C','To / from ceiling or turbo','configurable','hot','turbo'],
+        ['3C','Next channel mode','else: smooth ↔ stepped ramp'],['6C','Smooth ↔ stepped','when 3C is channel modes'],
+        ['3H','Momentary turbo, or tint ramp','','hot'],['4H','Momentary turbo','multi-channel lights','hot'],
+        ['4C','Lockout','','cool','lockout'],['5C','Momentary mode','','','moment'],
+        ['5H','Sunset timer','+5 min per hold'],['7H','Ramp config menu','floor · ceiling · speed','cool','rampcfg'],
+        ['9H','Channel-mode menu','enable / disable','cool','chancfg'],['10C','Save manual memory'],['10H','Ramp Extras config menu','','cool','rampextras']
+      ]},
+      turbo:{c:'Turbo',nosort:1,t:'Turbo / Ceiling',e:'Highest output. From On: 2C. From Off: 2C (ceiling) or 2H (momentary turbo).',r:[
+        ['2C','To / from turbo or ceiling','','hot'],['1H / 2H','Ramp down out of it'],['1C','Off']
+      ]},
+      lockout:{c:'Lockout',t:'Lockout — button lock',e:'Enter from Off or On with 4C. The button is locked against accidental presses.',r:[
+        ['4C','Exit — on at memorized level','','key'],['4H','Exit — on at floor'],['5C','Exit — on at ceiling'],
+        ['3C','Unlock, stay off'],['1H','Momentary moon (while held)'],['2H','Momentary moon (highest floor)'],
+        ['3H','Next channel mode','if more than one enabled'],
+        ['7C','Aux LED: pattern','','cool','aux'],['7H','Aux LED: color','','cool','aux'],['10H','Auto-lock config','n clicks = n minutes','cool','autolockcfg']
+      ]},
+      aux:{c:'Aux LEDs',t:'Aux / button LEDs',e:'The little LEDs in the switch or around the lens. Set from Off (and inside lockout).',r:[
+        ['7C','Next pattern','off · low · high · blinking · aux-only…'],
+        ['7H','Next color','red · yellow · green · cyan · blue · purple · white…'],
+        ['8H','Brightness','some models']
+      ]},
+      batt:{c:'Batt check',nosort:1,t:'Battery check',e:'Blinks out the battery voltage. 3C from Off enters here; 2C steps to the next mode.',r:[
+        ['2C','Next mode: Temperature check','','','temp'],
+        ['7H','Voltage config menu','5 items','cool','voltagecfg'],
+        ['1H','Toggle Batt Color mode','some models'],
+        ['1C','Back to off']
+      ]},
+      strobes:{c:'Strobes',t:'Strobe / mood modes',e:'From Off: 3H — jumps to the last-used strobe. 2C cycles through the group (listed below).',cyclehint:'2C = next · 4C = previous',r:[
+        ['1C','Back to off'],
+        ['2C','Next strobe / mood mode'],['4C','Previous strobe / mood mode'],
+        ['1H','Brighter / faster','except lightning'],['2H','Dimmer / slower','except lightning'],
+        ['5C','→ Momentary mode (momentary strobe)'],
+        ['5H','Candle timer (sunset) — candle only','+5 min per hold','cool']
+      ],modes:[
+        ['Candle','Flickers like a candle flame; can run on a sunset timer (5H)'],
+        ['Bike flasher','Steady medium level, pulses brighter once per second'],
+        ['Party strobe','Fast motion-freezing strobe; speed via 1H / 2H'],
+        ['Tactical strobe','Disorienting strobe, 33% duty cycle; speed via 1H / 2H'],
+        ['Lightning storm','Random flashes & brightness; may jump to full power'],
+        ['Police strobe','Two-colour strobe — only on some multi-colour lights']
+      ]},
+      moment:{c:'Momentary',nosort:1,t:'Momentary mode',e:'From Off: 5C (or 5C from Ramp or a strobe). On only while the button is held — for Morse code or light painting.',r:[
+        ['hold','On at the memorized level (or last strobe) while held'],['release','Off'],
+        ['—','Exit: unscrew the tailcap / battery to cut power','no click leaves momentary']
+      ]},
+      tactical:{c:'Tactical',t:'Tactical mode',e:'From Off: 6C. Three momentary slots — each lights only while the button is held.',r:[
+        ['1H','Slot 1 — default: high'],['2H','Slot 2 — default: low'],['3H','Slot 3 — default: strobe'],
+        ['6C','Exit to Off'],['7H','Configure the three slots','','cool','tacticalcfg']
+      ]},
+      temp:{c:'Temp check',nosort:1,t:'Temperature check',e:'Blinks out the current temperature in °C. Reached from Batt check with 2C.',r:[
+        ['2C','Next mode: Beacon','','','beacon'],
+        ['7H','Thermal config menu','2 items','cool','thermalcfg'],
+        ['1C','Off']
+      ]},
+      beacon:{c:'Beacon',nosort:1,t:'Beacon mode',e:'A slow pulse. Brightness = memorized ramp level.',r:[
+        ['1H','Set beacon interval','hold = seconds between pulses'],
+        ['2C','Next mode: SOS','','','sos'],
+        ['1C','Off']
+      ]},
+      sos:{c:'SOS',nosort:1,t:'SOS mode',e:'Distress signal · · · — — — · · ·, repeating.',r:[
+        ['2C','Next mode: Battery check','','','batt'],
+        ['1C','Off']
+      ]},
+      rampcfg:{c:'Ramp config',nosort:1,t:'Ramp config menu',e:'From ON: 7H. Hold on an item = skip, release = enter; then click +1, hold +10.',r:[
+        ['1','Floor level','clicks = level out of 150 (1 = lowest)'],
+        ['2','Ceiling level','clicks from the top (31 = 120/150)'],
+        ['3','Speed / steps','smooth: 1–4 (1 fastest) · stepped: number of steps']
+      ]},
+      rampextras:{c:'Ramp Extras',nosort:1,t:'Ramp Extras config menu',e:'From ON: 10H.',r:[
+        ['1','Disable manual memory','back to automatic'],
+        ['2','Manual memory timer','N clicks = N min (0 = off)'],
+        ['3','Ramp after moon','0 = ramp up · 1 = stay at floor'],
+        ['4','Turbo style','0 none · 1 Anduril-1 · 2 Anduril-2'],
+        ['5','Smooth steps','0 off · 1 on']
+      ]},
+      simplecfg:{c:'Simple-UI config',nosort:1,t:'Simple-UI config menu',e:'From OFF: 10H (sets Simple UI while in Advanced).',r:[
+        ['1','Floor'],['2','Ceiling'],['3','Number of steps'],['4','Turbo style']
+      ]},
+      voltagecfg:{c:'Voltage config',nosort:1,t:'Voltage config menu',e:'Inside battery check: 7H.',r:[
+        ['1','Voltage correction','20 = +0.00 V; ±0.01 V per click (max ±0.20 V)'],
+        ['2','Post-off voltage display','seconds, RGB aux (0 = off)'],
+        ['3','Aux low ramp level','0 = 255 (shortcut)'],
+        ['4','Aux high ramp level','0 = 255'],
+        ['5','Aux while on','0 none · 1 single · 2 RGB · 3 both']
+      ]},
+      thermalcfg:{c:'Thermal config',nosort:1,t:'Thermal config menu',e:'Inside temperature check: 7H.',r:[
+        ['1','Set current temperature','click once per °C to calibrate'],
+        ['2','Temperature limit','clicks above 30 °C (default 45, max 70)']
+      ]},
+      misccfg:{c:'Misc config',nosort:1,t:'Misc config menu',e:'From OFF: 9H (some lights).',r:[
+        ['1','Tint ramp style','0 smooth · 1 middle · 2 extremes · 3+ stepped'],
+        ['2','Jump start level','1–150 (usually 20–50)']
+      ]},
+      chancfg:{c:'Channel menu',nosort:1,t:'Channel-mode menu',e:'While ON: 9H (multi-channel lights).',r:[
+        ['N','Enable / disable mode N','wait for the Nth blink, release, then 1 = on / 0 = off']
+      ]},
+      tacticalcfg:{c:'Tactical config',nosort:1,t:'Tactical config menu',e:'In Tactical: 7H. Release after the 1st/2nd/3rd blink to pick a slot.',r:[
+        ['1','Slot 1'],['2','Slot 2'],['3','Slot 3'],
+        ['→','Slot value','1–150 = level · 0 = last strobe · 151+ = a strobe']
+      ]},
+      autolockcfg:{c:'Auto-lock',nosort:1,t:'Auto-lock config menu',e:'In Lockout: 10H.',r:[
+        ['1','Timeout','N clicks = N minutes · 0 = disabled']
+      ]}
+    },
+    simple:{
+      off:{c:'Off',t:'OFF — standby',e:'The light is off.',r:[
+        ['1C','On — last-used brightness','','key'],['1H','On at floor, keep holding to ramp up','','key'],
+        ['2C','On at ceiling (highest safe level)'],['2H','Momentary at ceiling — on while held'],
+        ['3C','Battery check — shows voltage once','','cool','batt'],['4C','Lockout (button lock)','','cool','lockout'],
+        ['10H','Switch to Advanced UI','','cool','ui-adv'],['15C+','Version check']
+      ]},
+      on:{c:'On',t:'ON · Ramp',e:'The light is on and ramping.',r:[
+        ['1C','Off','','key'],['1H','Ramp up','ramps down if just released','key'],['2H','Ramp down','','key'],
+        ['2C','To / from highest safe level','','','turbo'],['4C','Lockout','','cool','lockout'],
+        ['3C','Smooth ↔ stepped ramp','extended Simple UI, some lights','cool'],
+        ['5H','Sunset timer','some lights','cool']
+      ]},
+      turbo:{c:'Ceiling',nosort:1,t:'Ceiling',e:'Highest safe level. From On or Off: 2C.',r:[
+        ['2C','To / from ceiling','','hot'],['1H / 2H','Ramp down out of it'],['1C','Off']
+      ]},
+      lockout:{c:'Lockout',t:'Lockout — button lock',e:'Enter from Off or On with 4C.',r:[
+        ['4C','Exit — on at memorized level','','key'],['4H','Exit — on at floor'],['5C','Exit — on at ceiling'],
+        ['3C','Unlock, stay off'],['1H','Momentary moon (while held)'],['2H','Momentary low']
+      ]},
+      batt:{c:'Batt check',nosort:1,t:'Battery check',e:'From Off: 3C. Flashes the voltage once, then returns to off.',r:[
+        ['3C','Enter — flashes voltage once','','key'],['1C','Back to off']
+      ]}
+    }
+  };
+
+  var stage=document.getElementById('stage'), picker=document.getElementById('picker'), detail=document.getElementById('detail');
+  var cur='simple', path=['off'];
+  var SW=720; // design width for the map
+  var SVGNS='http://www.w3.org/2000/svg';
+
+  function center(nodes,id){var n=nodes.find(function(x){return x.id===id;});return [n.x,n.y];}
+  function sk(code){var m=String(code).match(/^(\d+)\s*([ch])/i);return m?parseInt(m[1],10)*10+(m[2].toLowerCase()==='c'?0:1):9999;}
+  function topId(){return path[0];}
+  function curView(){return D[cur][path[path.length-1]] || D[cur][path[0]];}
+  function go(id){ if(D[cur][id]){ path=[id]; renderAll(); } }
+  function drill(id){ if(D[cur][id]){ path.push(id); renderAll(); } }
+  function crumb(id){ var v=D[cur][id]; return v?(v.c||v.t):id; }
+  function act(to){ if(to==='ui-adv'){setUI('adv');} else if(to==='ui-simple'){setUI('simple');} else { drill(to); } }
+  function isMobile(){ try{return window.matchMedia('(max-width:700px)').matches;}catch(e){return false;} }
+
+  function renderOverview(){
+    var data=UI[cur], sel=topId();
+    stage.innerHTML='';
+    var maxY=0; data.nodes.forEach(function(n){if(n.y>maxY)maxY=n.y;});
+    var H=maxY+68;
+    stage.style.aspectRatio=SW+' / '+H;
+    var svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+    svg.setAttribute('class','wires'); svg.setAttribute('viewBox','0 0 '+SW+' '+H); svg.setAttribute('preserveAspectRatio','none');
+    stage.appendChild(svg);
+    data.edges.forEach(function(e){
+      var a=center(data.nodes,e[0]), b=center(data.nodes,e[1]);
+      var ln=document.createElementNS('http://www.w3.org/2000/svg','line');
+      ln.setAttribute('x1',a[0]);ln.setAttribute('y1',a[1]);ln.setAttribute('x2',b[0]);ln.setAttribute('y2',b[1]);
+      if(e[0]===sel||e[1]===sel) ln.setAttribute('class','lit');
+      svg.appendChild(ln);
+      var lab=document.createElement('div'); lab.className='elabel';
+      lab.style.left=(((a[0]+b[0])/2)/SW*100)+'%'; lab.style.top=(((a[1]+b[1])/2)/H*100)+'%'; lab.textContent=e[2];
+      stage.appendChild(lab);
+    });
+    data.nodes.forEach(function(n){
+      var btn=document.createElement('button');
+      btn.className='node'+(n.role==='hub'?' hub':'')+(n.tone?' tone-'+n.tone:'')+(n.id===sel?' active':'');
+      btn.style.left=(n.x/SW*100)+'%'; btn.style.top=(n.y/H*100)+'%';
+      btn.setAttribute('aria-pressed',n.id===sel);
+      btn.innerHTML='<b>'+n.t+'</b><small>'+n.s+'</small>';
+      btn.addEventListener('click',function(){go(n.id);});
+      stage.appendChild(btn);
+    });
+    var oc=center(data.nodes,'off');
+    var sx=95, sy=66, swTo=(cur==='adv')?'ui-simple':'ui-adv', swCode=(cur==='adv')?'10C':'10H', swLbl=(cur==='adv')?'→ Simple UI':'→ Advanced UI';
+    var sl=document.createElementNS(SVGNS,'line'); sl.setAttribute('x1',oc[0]);sl.setAttribute('y1',oc[1]);sl.setAttribute('x2',sx);sl.setAttribute('y2',sy);sl.setAttribute('class','lit');svg.appendChild(sl);
+    var slab=document.createElement('div'); slab.className='elabel'; slab.style.left=(((oc[0]+sx)/2)/SW*100)+'%'; slab.style.top=(((oc[1]+sy)/2)/H*100)+'%'; slab.textContent=swCode; stage.appendChild(slab);
+    var sb=document.createElement('button'); sb.className='node tone-cool'; sb.style.left=(sx/SW*100)+'%'; sb.style.top=(sy/H*100)+'%'; sb.innerHTML='<b>'+swLbl+'</b>'; sb.addEventListener('click',function(){act(swTo);}); stage.appendChild(sb);
+  }
+
+  function renderMap(){
+    var cid=path[path.length-1];
+    if(isMobile()) renderVertical(cid);
+    else if(cid==='off') renderOverview(); else renderFocused(cid);
+  }
+
+  function renderVertical(cid){
+    var V=D[cur][cid]; stage.style.aspectRatio='auto';
+    var rows=V.r.slice(); if(!V.nosort) rows.sort(function(a,b){return sk(a[0])-sk(b[0]);});
+    var bc='';
+    if(path.length>1){ bc='<div class="crumbs">'+path.map(function(id,i){return i<path.length-1?'<button data-i="'+i+'">'+crumb(id)+'</button><span>›</span>':'<em>'+crumb(id)+'</em>';}).join('')+'</div>'; }
+    var back = path.length>1 ? '<button class="vback" data-back="1">‹ '+crumb(path[path.length-2])+'</button>' : '';
+    var lis=rows.map(function(r){
+      var to=r[4]; var tone=(r[3]==='hot')?' tone-hot':((r[3]==='cool'||to)?' tone-cool':''); var key=(r[3]==='key')?' key':'';
+      var note=r[2]?'<small>'+r[2]+'</small>':''; var tag=to?' drill':''; var da=to?' data-to="'+to+'"':'';
+      var el=to?'button':'div';
+      return '<'+el+' class="vchip'+tag+tone+key+'"'+da+'><span class="code">'+r[0]+'</span><span class="fl">'+r[1]+note+'</span></'+el+'>';
+    }).join('');
+    var modes='';
+    if(V.modes){ modes='<div class="dsub">The modes · '+(V.cyclehint||'2C = next')+'</div><ul class="vtree">'+V.modes.map(function(m,i){return '<div class="vchip"><span class="code">'+(i+1)+'</span><span class="fl">'+m[0]+'<small>'+m[1]+'</small></span></div>';}).join('')+'</ul>'; }
+    stage.innerHTML='<div class="vmap">'+bc+back+'<div class="vhead"><b>'+V.t+'</b><small>'+V.e+'</small></div><ul class="vtree">'+lis+'</ul>'+modes+'</div>';
+    Array.prototype.forEach.call(stage.querySelectorAll('.vchip[data-to]'),function(el){el.addEventListener('click',function(){act(el.getAttribute('data-to'));});});
+    var bk=stage.querySelector('.vback'); if(bk) bk.addEventListener('click',function(){path.pop();renderAll();});
+    Array.prototype.forEach.call(stage.querySelectorAll('.crumbs button'),function(b){b.addEventListener('click',function(){path=path.slice(0,parseInt(b.getAttribute('data-i'),10)+1);renderAll();});});
+  }
+
+  function renderFocused(cid){
+    var V=D[cur][cid]; stage.innerHTML='';
+    var rows=V.r.slice();
+    if(!V.nosort) rows.sort(function(a,b){return sk(a[0])-sk(b[0]);});
+    var n=rows.length, topPad=24, rowH=78;
+    var H=Math.max(250, topPad*2 + n*rowH - (rowH-50));
+    stage.style.aspectRatio=SW+' / '+H;
+    var svg=document.createElementNS(SVGNS,'svg'); svg.setAttribute('class','wires'); svg.setAttribute('viewBox','0 0 '+SW+' '+H); svg.setAttribute('preserveAspectRatio','none'); stage.appendChild(svg);
+    var cx=235, cy=H/2;
+    function line(x1,y1,x2,y2){var l=document.createElementNS(SVGNS,'line');l.setAttribute('x1',x1);l.setAttribute('y1',y1);l.setAttribute('x2',x2);l.setAttribute('y2',y2);l.setAttribute('class','lit');svg.appendChild(l);}
+    var backId = path.length>1 ? path[path.length-2] : 'off';
+    if(backId){ line(70,cy,cx,cy); var bb=document.createElement('button'); bb.className='node'; bb.style.left=(70/SW*100)+'%'; bb.style.top=(cy/H*100)+'%'; bb.innerHTML='<b>‹ '+crumb(backId)+'</b>'; bb.addEventListener('click',function(){ if(path.length>1){path.pop();renderAll();}else{go('off');} }); stage.appendChild(bb); }
+    rows.forEach(function(r,i){
+      var to=r[4], x=560, y=topPad+i*rowH+26;
+      line(cx,cy,x,y);
+      var tone=(r[3]==='hot')?'tone-hot':((r[3]==='cool'||to)?'tone-cool':'');
+      var el=document.createElement(to?'button':'div');
+      el.className='node fnode '+(to?'drill':'leaf')+(tone?' '+tone:'')+(r[3]==='key'?' key':'');
+      el.style.left=(x/SW*100)+'%'; el.style.top=(y/H*100)+'%';
+      el.innerHTML='<span class="code">'+r[0]+'</span><span class="fl">'+r[1]+'</span>';
+      if(to) el.addEventListener('click',function(){act(to);});
+      stage.appendChild(el);
+    });
+    var cc=document.createElement('button'); cc.className='node hub active'; cc.style.left=(cx/SW*100)+'%'; cc.style.top=(cy/H*100)+'%'; cc.innerHTML='<b>'+crumb(cid)+'</b>'; stage.appendChild(cc);
+  }
+
+  function renderPicker(){
+    var data=UI[cur], sel=topId();
+    picker.innerHTML=data.nodes.map(function(n){
+      return '<button class="pbtn'+(n.role==='hub'?' hub':'')+(n.tone?' tone-'+n.tone:'')+(n.id===sel?' active':'')+
+        '" data-id="'+n.id+'" aria-pressed="'+(n.id===sel)+'"><b>'+n.t+'</b><small>'+n.s+'</small></button>';
+    }).join('');
+    Array.prototype.forEach.call(picker.querySelectorAll('.pbtn'),function(b){
+      b.addEventListener('click',function(){go(b.getAttribute('data-id'));});
+    });
+  }
+
+  function renderDetail(){
+    var d=curView();
+    var bc='';
+    if(path.length>1){
+      bc='<div class="crumbs">'+path.map(function(id,i){
+        return i<path.length-1 ? '<button data-i="'+i+'">'+crumb(id)+'</button><span>›</span>' : '<em>'+crumb(id)+'</em>';
+      }).join('')+'</div>';
+    }
+    var rows=d.r.slice();
+    if(!d.nosort) rows.sort(function(a,b){return sk(a[0])-sk(b[0]);});
+    var html=rows.map(function(x){
+      var to=x[4]; var cls=((x[3]||'')+(to?' drill':'')).trim();
+      var clsAttr=cls?(' class="'+cls+'"'):''; var dataAttr=to?(' data-to="'+to+'"'):'';
+      var note=x[2]?('<small>'+x[2]+'</small>'):'';
+      return '<li'+clsAttr+dataAttr+'><span class="code">'+x[0]+'</span><span class="l"><b>'+x[1]+'</b>'+note+'</span></li>';
+    }).join('');
+    var modesHtml='';
+    if(d.modes){
+      var ch=d.cyclehint||'2C = next';
+      modesHtml='<div class="dsub">The modes · '+ch+'</div><ul class="modes">'+
+        d.modes.map(function(m,i){return '<li><span class="code">'+(i+1)+'</span><span class="l"><b>'+m[0]+'</b><small>'+m[1]+'</small></span></li>';}).join('')+'</ul>';
+    }
+    detail.innerHTML='<div class="dh"><b>'+d.t+'</b><small>'+d.e+'</small></div>'+bc+'<ul>'+html+'</ul>'+modesHtml;
+    Array.prototype.forEach.call(detail.querySelectorAll('li[data-to]'),function(li){
+      li.addEventListener('click',function(){act(li.getAttribute('data-to'));});
+    });
+    Array.prototype.forEach.call(detail.querySelectorAll('.crumbs button'),function(b){
+      b.addEventListener('click',function(){path=path.slice(0,parseInt(b.getAttribute('data-i'),10)+1);renderAll();});
+    });
+  }
+
+  function renderAll(){ renderMap(); renderPicker(); renderDetail(); }
+
+  function setUI(ui){
+    cur=ui;
+    var s=ui==='simple';
+    document.getElementById('tab-simple').setAttribute('aria-selected',s);
+    document.getElementById('tab-adv').setAttribute('aria-selected',!s);
+    path=path.filter(function(id){return D[cur][id];}); if(!path.length) path=['off'];
+    renderAll();
+    try{localStorage.setItem('anduril-ui',ui);}catch(e){}
+  }
+  document.getElementById('tab-simple').addEventListener('click',function(){setUI('simple');});
+  document.getElementById('tab-adv').addEventListener('click',function(){setUI('adv');});
+  try{window.matchMedia('(max-width:700px)').addEventListener('change',function(){renderAll();});}catch(e){}
+  var saved='simple'; try{saved=localStorage.getItem('anduril-ui')||'simple';}catch(e){}
+  setUI(saved==='adv'?'adv':'simple');
+</script>
+
+</body>
+</html>
