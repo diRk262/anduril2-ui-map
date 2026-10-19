@@ -5,7 +5,7 @@ Pick a state (Off, On, Lockout, Strobes, Battery check, …) and drill through
 every click and config menu, with a breadcrumb back-path. Switch between the
 Simple and Advanced interfaces right on the map.
 
-**Live:** https://diRk262.github.io/anduril2/
+**Live:** https://diRk262.github.io/anduril2-ui-map/
 
 ## Features
 
